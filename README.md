@@ -104,9 +104,11 @@ An overview of the whole network. It consists of three combining 2D U-Net-like n
     --batch_size = 8
 
 (4): predicton on the unseen data:
+    
     python ThreeD_fusion_net/predict.py --output_folder project_directory_path
 
 (5): performance evaluation
+    
     python ThreeD_fusion_net/evaluate_bat.py --output_folder project_directory_path
 
 (6): Postprocessing3D
