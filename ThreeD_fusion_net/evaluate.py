@@ -2,17 +2,20 @@
 
 import os
 import glob
-import argparse
 import numpy as np
 import pandas as pd
 import SimpleITK as sitk
 import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
+from skimage.metrics import hausdorff_distance
 
 from config import config
 
+
+
 #%%
+rootdir =  os.path.abspath("../resultData/" )
 acc_area = 0
 
 def get_bat_segmentation(data):
@@ -32,6 +35,9 @@ def average_volume_difference(truth, prediction):
 def recall(truth, prediction):
     return 1 * np.sum(truth * prediction)/ np.sum(truth)
 
+def precision(truth, prediction):
+    return  1 * np.sum(truth * prediction)/ np.sum(prediction)
+
 def evaluate(prediction_dir):    
     header_choose = ("Bat Segmentation",)
     masking_functions_choose = (get_bat_segmentation,)
@@ -50,7 +56,9 @@ def evaluate(prediction_dir):
     case_folder_list.sort()
     jaccard_list = []
     AVD_list = []
+    precision_list = []
     recall_list = []
+    hausdorff_list = []
     index_list = []
     for case_folder in case_folder_list:
         print(str(case_folder))
@@ -76,9 +84,13 @@ def evaluate(prediction_dir):
             print('jaccard:' + str(jaccard_index(func(truth), func(prediction))))
             print('AVD:' + str(average_volume_difference(func(truth), func(prediction))))
             print('recall:' + str(recall(func(truth), func(prediction))))
+            print('precision:' + str(precision(func(truth), func(prediction))))
+            print('hausdorff disctance:' + str(hausdorff_distance(func(truth).astype(bool), func(prediction).astype(bool))))
             jaccard_list.append(jaccard_index(func(truth), func(prediction)))
             AVD_list.append(average_volume_difference(func(truth), func(prediction)))
             recall_list.append(recall(func(truth), func(prediction)))
+            precision_list.append(precision(func(truth), func(prediction)))
+            hausdorff_list.append(hausdorff_distance(func(truth).astype(bool), func(prediction).astype(bool)))
 
         rows.append(dice_list)
         index_list.append(index)
@@ -116,14 +128,11 @@ def evaluate(prediction_dir):
     print('jaccard:', 'mean:' + str(np.mean(jaccard_list)) , 'std:' + str(np.std(jaccard_list)), 'max:' + str(np.max(jaccard_list)), 'min:' + str(np.min(jaccard_list)))
     print('AVD:', 'mean:' + str(np.mean(AVD_list)), 'std:' + str(np.std(AVD_list)), 'max:' + str(np.max(AVD_list)), 'min:' + str(np.min(AVD_list)))
     print('recall:','mean:' + str(np.mean(recall_list)) , 'std:' + str(np.std(recall_list)), 'max:' + str(np.max(recall_list)), 'min:' + str(np.min(recall_list)))
+    print('precision:','mean:' + str(np.mean(precision_list)) , 'std:' + str(np.std(precision_list)), 'max:' + str(np.max(precision_list)), 'min:' + str(np.min(precision_list)))
+    print('Hausdorff Distance:','mean:' + str(np.mean(hausdorff_list)) , 'std:' + str(np.std(hausdorff_list)), 'max:' + str(np.max(hausdorff_list)), 'min:' + str(np.min(hausdorff_list)))
 
     return np.mean(rows)
-
-def main():
-    parser = argparse.ArgumentParser(description = "BATNet command line tool")
-    parser.add_argument("--output_folder", type=str, help = "folder to restore the outputs")
-    args = parser.parse_args()
-    evaluate(args.output_folder)
-
+    
 if __name__ == "__main__":
-    main()
+    prediction_dir = os.path.join(rootdir,'test_prediction')
+    evaluate(prediction_dir)

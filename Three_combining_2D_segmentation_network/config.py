@@ -1,42 +1,36 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
+
 config = dict()
 
-# base line information 
+# data split
+config['divideData'] = False
+config['test_num']= 10
 
-# original image dimension
-config['org_dim_z']=93
+config['org_dim_z']=96
 config['org_dim_x']=288
 config['org_dim_y']=288
 
-# the dimension after processing. 
 config['dim_z']=96
 config['dim_x']=288
 config['dim_y']=288
 
-# set the image parameters
-Reference={}    
-Reference['origin'] = (0, 0, 0)
-Reference['spacing'] = (1, 1, 2)
-Reference['direction'] = (1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)
-config['Image_Reference'] = Reference
+config['dataDim']= 'x'
+config['rounds'] = 5
 
 # data preparing
-
-# data split in processing 
-config['radomly_split_the_data']=False # Select true if one would like radomly re-split the dataset into a training set and a tes set.
-config['test_num']=8 # Number of 
-
 # data propressing when loading the data
 config['NormType'] = 0
 # data normalization when preparing the data
 config['IfglobalNorm'] = True
 
-# parameters during training the network
-config['dataDim'] = 'y' # z: Axial x: Coronal y: Sagittal
-config['channel'] = 4
-config['gpu']='0'
+# parameters of the network
+config['learningRate'] = 1e-3
+config['batch_size']= 128
+config['epochs'] = 250
+config['gpu']= '0'
 
-# parameters used when evaluating the predicted result
-config['GTFILE']='Label.txt'
-config['preThreshold'] = 0.5
+# parameters of losses
+config['Tversky_alpha'] = 0.6
+config['focal_gamma'] = 0.75
+config['focal_alpha'] = 1.0

@@ -12,7 +12,7 @@ import numpy as np
 import os
 import string
 import subprocess
-import libPostProcess as pr
+
 
 
 def readTxtIntoList(filename):
@@ -55,11 +55,10 @@ def postProcessing(filepathLabel, inputroot, outputroot):
     else:
         raise ValueError('the length of the files should be same')
     
-    for i in range(len(refListLabel)):
+    for i in xrange(len(refListLabel)):
         item = refListLabel[i]
         filename = os.path.basename(item)
-        checkItem = string.join((filename).split("_")[2:3], "_")
-        print('checkItme : ' + checkItem)
+        checkItem = string.join((filename).split("_")[1:2], "_")
         if not ((checkItem in refListFF[i]) and (checkItem in refListT2Star[i])\
             and (checkItem in refListFat[i]) and (checkItem in refListWater[i])):
             raise ValueError(str(i)+' th do not match each other')
@@ -85,7 +84,7 @@ def postProcessing(filepathLabel, inputroot, outputroot):
         subprocess.call('mkdir ' + '-p ' + refinedLabeldir, shell=True)
     
     filelist =[]
-    for i in range(N):
+    for i in xrange(N):
         postProcessing = pr.postRefinement(refinedLabeldir)
         postProcessing.inputImage(refListLabel[i], refListFF[i], refListT2Star[i],\
                                   refListFat[i], refListWater[i])
@@ -94,13 +93,8 @@ def postProcessing(filepathLabel, inputroot, outputroot):
         filelist.append(postProcessing.removeBoneadnAir(threshold = 300, ifLogOutput = IFLogOutput))
         postProcessing.finalRefine(dilationPara, ClossingPara, ErosionPara,\
                                    removeSmallObj, ifLogOutput = IFLogOutput)
-        print "processing num: %d" %(i)
+        print("processing num: %d" %(i))
     
     filename = os.path.join(outputroot,'FileList.txt')
     WriteListtoFile(filelist, filename)
     
-if __name__ == "__main__":
-   inputroot = '/media/user/Daten/yuzhao/project/BATSegmentation/TestData'
-   filepathLabel = inputroot + '/Label.txt'
-   outputroot = '/media/user/Daten/yuzhao/project/BATSegmentation/manualLabel'
-   postProcessing(filepathLabel,inputroot, outputroot)

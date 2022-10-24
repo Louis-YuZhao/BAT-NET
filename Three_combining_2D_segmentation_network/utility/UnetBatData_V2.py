@@ -12,6 +12,7 @@ import SimpleITK as sitk
 import string
 import random
 import subprocess
+import matplotlib.pyplot as plt
 
 #%%
 def GetListFromFolder(filename, endswith = ".nrrd"):
@@ -22,15 +23,11 @@ def GetListFromFolder(filename, endswith = ".nrrd"):
     imageList.sort()
     return imageList
 
-def GetCheckItem(filename):
-    checkItem = string.join((filename).split("_")[0:2], "_")
-    return checkItem
-
 def GetImageID(ImageList):
     ImageIDList = []
     for item in ImageList:
         filename = os.path.basename(item)
-        checkItem = GetCheckItem(filename)
+        checkItem = string.join((filename).split("_")[0:2], "_")
         ImageIDList.append(checkItem)
     return ImageIDList
 
@@ -104,7 +101,7 @@ class MulitModilityDataSplit(object):
             self.ImageNum = len(self.listFF)
         else:
             raise ValueError('the length of the files should be same')
-        for i in range(len(self.ImageIDs)):
+        for i in xrange(len(self.ImageIDs)):
             checkItem = self.ImageIDs[i]
             if not ((checkItem in self.listFF[i]) and (checkItem in self.listT2S[i])\
                 and (checkItem in self.listF[i]) and (checkItem in self.listW[i])):
@@ -130,7 +127,7 @@ class MulitModilityDataSplit(object):
         else:
             raise ValueError('the length of the files should be same')
         
-        for i in range(ImageNum):
+        for i in xrange(ImageNum):
             checkItem = self.ImageIDs[i]
             if not(checkItem in listCheck[i]):
                 raise ValueError(str(i)+'th do not match each other')
@@ -164,6 +161,7 @@ class MulitModilityDataSplit(object):
         train_path['F'] = os.path.join(self.outputDir, 'TrainingData/F.txt')
         train_path['W'] = os.path.join(self.outputDir, 'TrainingData/W.txt')
         train_path['Label'] = os.path.join(self.outputDir, 'TrainingData/Label.txt')
+        train_path['Mask'] = os.path.join(self.outputDir, 'TrainingData/Mask.txt')
         result_dir_pre = os.path.join(self.outputDir, 'TrainingData')
         if not os.path.exists(result_dir_pre):
             subprocess.call('mkdir ' + '-p ' + result_dir_pre, shell=True)
@@ -174,7 +172,6 @@ class MulitModilityDataSplit(object):
         WriteListtoFile(trainList_W, train_path['W'])
         WriteListtoFile(trainList_Label, train_path['Label'])
         if self.IsThereMask == True:
-            train_path['Mask'] = os.path.join(self.outputDir, 'TrainingData/Mask.txt')
             WriteListtoFile(trainList_Mask, train_path['Mask'])
 
         # test part
@@ -201,6 +198,7 @@ class MulitModilityDataSplit(object):
         test_path['F'] = os.path.join(self.outputDir, 'TestData/F.txt')
         test_path['W'] = os.path.join(self.outputDir, 'TestData/W.txt')
         test_path['Label'] = os.path.join(self.outputDir, 'TestData/Label.txt')
+        test_path['Mask'] = os.path.join(self.outputDir, 'TestData/Mask.txt')
         result_dir_pre = os.path.join(self.outputDir, 'TestData')
         if not os.path.exists(result_dir_pre):
             subprocess.call('mkdir ' + '-p ' + result_dir_pre, shell=True)        
@@ -211,7 +209,6 @@ class MulitModilityDataSplit(object):
         WriteListtoFile(testList_W, test_path['W'])
         WriteListtoFile(testList_Label, test_path['Label'])
         if self.IsThereMask == True:
-            test_path['Mask'] = os.path.join(self.outputDir, 'TestData/Mask.txt')
             WriteListtoFile(testList_Mask, test_path['Mask'])
         
         return train_path, test_path
@@ -244,8 +241,8 @@ class UnetBatDataPreprocessing(object):
             self.ImageNum = len(self.listFF)
         else:
             raise ValueError('the length of the files should be same')
-        for i in range(self.ImageNum):
-            checkItem = GetCheckItem(self.listFF[i])
+        for i in xrange(self.ImageNum):
+            checkItem = string.join((os.path.basename(self.listFF[i])).split("_")[1:2], "_")
             print('the checkItem is :', checkItem)
             if not ((checkItem in self.listFF[i]) and (checkItem in self.listT2S[i])\
                 and (checkItem in self.listF[i]) and (checkItem in self.listW[i])):
@@ -269,8 +266,8 @@ class UnetBatDataPreprocessing(object):
         else:
             raise ValueError('the length of the files should be same')
         
-        for i in range(ImageNum):
-            checkItem = GetCheckItem(listOne[i])
+        for i in xrange(ImageNum):
+            checkItem = string.join((os.path.basename(listOne[i])).split("_")[1:2], "_")
             if not((checkItem in listOne[i]) and (checkItem in listTwo[i])):
                 raise ValueError(str(i)+'th do not match each other')
 
@@ -283,7 +280,7 @@ class UnetBatDataPreprocessing(object):
         imgsArray = sitk.GetArrayFromImage(img)
         imgsArray = imgsArray[np.newaxis,:]
 
-        for i in range (1,total):        
+        for i in xrange (1,total):        
             img = sitk.ReadImage(imageList[i])
             tempArray = sitk.GetArrayFromImage(img)
             tempArray = tempArray[np.newaxis,:]
@@ -309,7 +306,7 @@ class UnetBatDataPreprocessing(object):
         imgsArray /= std
         imgsArray = imgsArray[np.newaxis,:]
 
-        for i in range (1,total):        
+        for i in xrange (1,total):        
             img = sitk.ReadImage(imageList[i])
             tempArray = sitk.GetArrayFromImage(img)
             mean = np.mean(tempArray)  # mean for data centering
@@ -324,6 +321,165 @@ class UnetBatDataPreprocessing(object):
         imgsArray.astype(dataType)
         np.save(outputTitle, imgsArray)
         print('Saving to .npy files done.')
+
+    def ReadVolumeDataNormEachPersonWithinMask(self, imageList, maskList, outputTitle, dataType):
+        # collect the image file path
+        total = len(imageList)
+
+        # collect the mask file path
+        if self.IsThereMask != True:
+            raise ValueError('There should be mask data, please recheck this') 
+
+        # check whether the image matches the mask
+        for i in xrange(total):
+            if (string.join((imageList[i]).split("_")[0:1], "_") != string.join((maskList[i]).split("_")[0:1], "_")) \
+                or ('Rotated' in imageList[i]) != ('Rotated' in maskList[i]):
+                raise ValueError('the'+ str(i) + 'th image and mask should match each other!')                
+        
+        print('Loading begin.')
+        img = sitk.ReadImage(imageList[0])
+        imgsArray = sitk.GetArrayFromImage(img)
+        mask = sitk.ReadImage(maskList[0])
+        maskArray = sitk.GetArrayFromImage(mask)
+        temp = imgsArray[maskArray>0]
+        mean = np.mean(temp)  # mean for data centering
+        std = np.std(temp)  # std for data normalization
+        imgsArray[maskArray>0] -= mean
+        imgsArray[maskArray>0] /= std
+        imgsArray[maskArray<0.8] = 0
+        imgsArray = imgsArray[np.newaxis,:]
+
+        for i in xrange (1,total):
+            img = sitk.ReadImage(imageList[i])
+            tempArray = sitk.GetArrayFromImage(img)
+            mask = sitk.ReadImage(maskList[i])
+            maskArray = sitk.GetArrayFromImage(mask)
+            temp = tempArray[maskArray>0]
+            mean = np.mean(temp)  # mean for data centering
+            std = np.std(temp)  # std for data normalization
+            tempArray[maskArray>0] -= mean
+            tempArray[maskArray>0] /= std
+            tempArray[maskArray<0.8] = 0
+            tempArray = tempArray[np.newaxis,:]
+            imgsArray = np.concatenate((imgsArray, tempArray), axis=0)                
+            if i % 100 == 0:
+                print('Done: {0}/{1} images'.format(i, total))
+            i += 1
+        
+        imgsArray.astype(dataType)
+        np.save(outputTitle, imgsArray)
+        print('Saving to .npy files done.')
+        
+    def ReadVolumeDataNormEachPersonWithinMaskV2(self, imageList, maskList, outputTitle, dataType):
+        # collect the image file path
+        total = len(imageList)
+
+        # collect the mask file path
+        if self.IsThereMask != True:
+            raise ValueError('There should be mask data, please recheck this') 
+
+        # check wether the image matches the mask
+        for i in xrange(total):
+            if (string.join((imageList[i]).split("_")[0:1], "_") != string.join((maskList[i]).split("_")[0:1], "_")) \
+                or ('Rotated' in imageList[i]) != ('Rotated' in maskList[i]):
+                raise ValueError('the'+ str(i) + 'th image and mask should match each other!')                
+        
+        print('Loading begin.')
+        img = sitk.ReadImage(imageList[0])
+        imgsArray = sitk.GetArrayFromImage(img)
+        mask = sitk.ReadImage(maskList[0])
+        maskArray = sitk.GetArrayFromImage(mask)
+        temp = imgsArray[maskArray>0]
+        maxItem = np.max(temp)  
+        minItem = np.min(temp)  
+        imgsArray[maskArray>0] -= minItem
+        imgsArray[maskArray>0] /= (maxItem - minItem)
+        imgsArray[maskArray<0.8] = 0
+        imgsArray = imgsArray[np.newaxis,:]
+
+        for i in xrange (1,total):
+            img = sitk.ReadImage(imageList[i])
+            tempArray = sitk.GetArrayFromImage(img)
+            mask = sitk.ReadImage(maskList[i])
+            maskArray = sitk.GetArrayFromImage(mask)
+            temp = tempArray[maskArray>0]
+            maxItem = np.max(temp)  
+            minItem = np.min(temp)  
+            tempArray[maskArray>0] -= minItem
+            tempArray[maskArray>0] /= (maxItem - minItem)
+            tempArray[maskArray<0.8] = 0
+            tempArray = tempArray[np.newaxis,:]
+            imgsArray = np.concatenate((imgsArray, tempArray), axis=0)                
+            if i % 100 == 0:
+                print('Done: {0}/{1} images'.format(i, total))
+            i += 1
+        
+        imgsArray.astype(dataType)
+        np.save(outputTitle, imgsArray)
+        print('Saving to .npy files done.')
+        
+    def ReadVolumeDataNormEachPersonWithinMaskV3(self, imageList, maskList, outputTitle, dataType):
+        # collect the image file path
+        total = len(imageList)
+
+        # collect the mask file path
+        if self.IsThereMask != True:
+            raise ValueError('There should be mask data, please recheck this') 
+
+        # check wether the image matches the mask
+        for i in xrange(total):
+            if (string.join((imageList[i]).split("_")[0:1], "_") != string.join((maskList[i]).split("_")[0:1], "_")) \
+                or ('Rotated' in imageList[i]) != ('Rotated' in maskList[i]):
+                raise ValueError('the'+ str(i) + 'th image and mask should match each other!')                
+        
+        print('Loading begin.')
+        img = sitk.ReadImage(imageList[0])
+        imgsArray = sitk.GetArrayFromImage(img)
+        mask = sitk.ReadImage(maskList[0])
+        maskArray = sitk.GetArrayFromImage(mask)
+        temp = imgsArray[maskArray>0]
+        maxItem = np.max(temp)  
+        minItem = np.min(temp)  
+        imgsArray[maskArray>0] -= minItem
+        imgsArray[maskArray>0] /= (maxItem - minItem)
+        imgsArray[maskArray<0.8] = 0
+        
+        temp = imgsArray[maskArray>0]
+        mean = np.mean(temp)  # mean for data centering
+        std = np.std(temp)  # std for data normalization
+        imgsArray[maskArray>0] -= mean
+        imgsArray[maskArray>0] /= std
+        imgsArray[maskArray<0.8] = 0
+        imgsArray = imgsArray[np.newaxis,:]
+
+        for i in xrange (1,total):
+            img = sitk.ReadImage(imageList[i])
+            tempArray = sitk.GetArrayFromImage(img)
+            mask = sitk.ReadImage(maskList[i])
+            maskArray = sitk.GetArrayFromImage(mask)
+            temp = tempArray[maskArray>0]
+            maxItem = np.max(temp)  
+            minItem = np.min(temp)  
+            tempArray[maskArray>0] -= minItem
+            tempArray[maskArray>0] /= (maxItem - minItem)
+            tempArray[maskArray<0.8] = 0
+            
+            temp = tempArray[maskArray>0]
+            mean = np.mean(temp)  # mean for data centering
+            std = np.std(temp)  # std for data normalization
+            tempArray[maskArray>0] -= mean
+            tempArray[maskArray>0] /= std
+            tempArray[maskArray<0.8] = 0
+            tempArray = tempArray[np.newaxis,:]
+            
+            imgsArray = np.concatenate((imgsArray, tempArray), axis=0)                
+            if i % 100 == 0:
+                print('Done: {0}/{1} images'.format(i, total))
+            i += 1
+        
+        imgsArray.astype(dataType)
+        np.save(outputTitle, imgsArray)
+        print('Saving to .npy files done.')
     
     def ReadLabelData(self, outputTitle, dataType, labelList):   
         total = len(labelList)
@@ -332,7 +488,7 @@ class UnetBatDataPreprocessing(object):
         imgsArray = sitk.GetArrayFromImage(img)
         imgsArray = imgsArray[np.newaxis,:]
 
-        for i in range (1,total):        
+        for i in xrange (1,total):        
             img = sitk.ReadImage(labelList[i])
             tempArray = sitk.GetArrayFromImage(img)
             tempArray = tempArray[np.newaxis,:]
@@ -349,7 +505,7 @@ class UnetBatDataPreprocessing(object):
         total = len(imageList)         
         img_id = imageList[0].split('/')[-1]
         imgs_id = [img_id.split('.')[0]]
-        for i in range (1,total):
+        for i in xrange (1,total):
             img_id = imageList[i].split('/')[-1]
             img_id = img_id.split('.')[0]     
             imgs_id.append(img_id)

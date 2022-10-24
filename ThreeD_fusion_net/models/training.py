@@ -10,8 +10,7 @@ from keras.callbacks import ModelCheckpoint, CSVLogger, LearningRateScheduler, R
 from keras.models import load_model
 import numpy as np
 
-from models.metrics import (dice_coefficient, dice_coefficient_loss, dice_coef, dice_coef_loss,
-                            weighted_dice_coefficient_loss, weighted_dice_coefficient)
+from models.metrics import *
 
 K.set_image_dim_ordering('th')
 
@@ -45,7 +44,11 @@ def load_old_model(model_file):
                       'dice_coef': dice_coef,
                       'dice_coef_loss': dice_coef_loss,
                       'weighted_dice_coefficient': weighted_dice_coefficient,
-                      'weighted_dice_coefficient_loss': weighted_dice_coefficient_loss}
+                      'weighted_dice_coefficient_loss': weighted_dice_coefficient_loss,
+                      'FocalTverskyLoss': FocalTverskyLoss,
+                      'FocalLoss': FocalLoss,
+                      'TverskyLoss': TverskyLoss,
+                      'generalised_dice_loss': generalised_dice_loss}
     return load_model(model_file, custom_objects=custom_objects)
 
 
@@ -79,26 +82,13 @@ def train_model(model, model_file, training_generator, validation_generator,
     :param n_epochs: Total number of epochs to train the model.
     :return: 
     """
-    # call validation generator by itsself
-    # cnt = 0
-    # v_data_x = None
-    # v_data_y = None
-    
-    # for i in range(validation_steps):
-    #     data = validation_generator.next()
-    #     v_data_x = data[0] if cnt == 0 else np.concatenate([v_data_x, data[0]], axis=0)
-    #     v_data_y = data[1] if cnt == 0 else np.concatenate([v_data_y, data[1]], axis=0)
-    #     cnt += 1
-
-    # v_data = (v_data_x, v_data_y)
-    
 
     model.fit_generator(generator = training_generator,
                         steps_per_epoch = steps_per_epoch,
                         epochs = n_epochs,
                         validation_data = validation_generator,
                         validation_steps = validation_steps,
-                        workers = 0, # when workers is not 0, it will cause the problem.
+                        workers = workers, # when workers is not 0, it will cause the problem.
                         use_multiprocessing=False,
                         callbacks = get_callbacks(model_file,
                                                 initial_learning_rate=initial_learning_rate,

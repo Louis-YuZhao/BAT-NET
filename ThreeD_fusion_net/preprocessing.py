@@ -1,51 +1,62 @@
 import os
 import sys
 import argparse
+
 sys.path.append('../')
 from models.data import write_data_to_file, open_data_file
 from models.data_prepare_v1 import get_training_and_validation_data
 from models.data_split import GetListFromFiles, set_train_validation_test
 from config import config
 from train import set_seed
-from train import fetch_training_data_files
 
-def main():
-    parser = argparse.ArgumentParser(description = "BATNet command line tool")
-    parser.add_argument("--input_data_root", type=str, help = "input data restored folder")
-    args = parser.parse_args()
-    
-    #set seed
-    set_seed(config['seed'])
 
-    os.makedirs(os.path.dirname(config["data_file"]), exist_ok=True)    
-    
-    input_data_root = args.input_data_root
-    overwrite=config["overwrite"]
+def fetch_training_data_files(folderNameDict):
+    '''return list
+    [(modality1, modality2, modality3, modality4, label)
+    (modality1, modality2, modality3, modality4, label)]
+    '''
+    training_data_files = list()
+    keys = list(folderNameDict.keys())    
+    NN = 0
+    for i in range(len(keys)):
+        if i == 0:
+            NN = len(folderNameDict[keys[i]])
+        else:
+            if NN != len(folderNameDict[keys[i]]):
+                raise ValueError('check the len of the list with key: ' + keys[i])  
+    for i in range(NN):
+        subject_files = list()
+        for modality in config["training_modalities"] + ["Label"]:
+            subject_files.append(folderNameDict[modality][i])
+        training_data_files.append(tuple(subject_files))
+    return training_data_files
+
+
+def data_preprocessing(input_data_root, overwrite=False):
 
    #-------------------------------------------------------#
     # convert input images into an hdf5 file
     outputfolder = os.path.dirname(config["data_file"])
-    
     if overwrite or not os.path.exists(config["data_file"]):        
         train_path = {}
-        train_path['FF'] = os.path.join(input_data_root, 'TrainingData/FF/Filelist.txt')
-        train_path['T2S'] = os.path.join(input_data_root, 'TrainingData/T2S/Filelist.txt')
-        train_path['F'] = os.path.join(input_data_root, 'TrainingData/F/Filelist.txt')
-        train_path['W'] = os.path.join(input_data_root, 'TrainingData/W/Filelist.txt')
-        train_path['pred_z'] = os.path.join(input_data_root, 'TrainingData/pred_z/Filelist.txt')
-        train_path['pred_x'] = os.path.join(input_data_root, 'TrainingData/pred_x/Filelist.txt')
-        train_path['pred_y'] = os.path.join(input_data_root, 'TrainingData/pred_y/Filelist.txt')
-        train_path['Label'] = os.path.join(input_data_root, 'TrainingData/Label/Filelist.txt')
+        train_path['FF'] = os.path.join(input_data_root, 'TrainingData/FF.txt')
+        train_path['T2S'] = os.path.join(input_data_root, 'TrainingData/T2S.txt')
+        train_path['F'] = os.path.join(input_data_root, 'TrainingData/F.txt')
+        train_path['W'] = os.path.join(input_data_root, 'TrainingData/W.txt')
+        train_path['pred_z'] = os.path.join(input_data_root, 'TrainingData/pred_z.txt')
+        train_path['pred_x'] = os.path.join(input_data_root, 'TrainingData/pred_x.txt')
+        train_path['pred_y'] = os.path.join(input_data_root, 'TrainingData/pred_y.txt')
+        train_path['Label'] = os.path.join(input_data_root, 'TrainingData/Label.txt')
         
         test_path = {}
-        test_path['FF'] = os.path.join(input_data_root, 'TestData/FF/Filelist.txt')
-        test_path['T2S'] = os.path.join(input_data_root, 'TestData/T2S/Filelist.txt')
-        test_path['F'] = os.path.join(input_data_root, 'TestData/F/Filelist.txt')
-        test_path['W'] = os.path.join(input_data_root, 'TestData/W/Filelist.txt')
-        test_path['pred_z'] = os.path.join(input_data_root, 'TestData/pred_z/Filelist.txt')
-        test_path['pred_x'] = os.path.join(input_data_root, 'TestData/pred_x/Filelist.txt')
-        test_path['pred_y'] = os.path.join(input_data_root, 'TestData/pred_y/Filelist.txt')
-        test_path['Label'] = os.path.join(input_data_root, 'TestData/Label/Filelist.txt')     
+        test_path['FF'] = os.path.join(input_data_root, 'TestData/FF.txt')
+        test_path['T2S'] = os.path.join(input_data_root, 'TestData/T2S.txt')
+        test_path['F'] = os.path.join(input_data_root, 'TestData/F.txt')
+        test_path['W'] = os.path.join(input_data_root, 'TestData/W.txt')
+        test_path['pred_z'] = os.path.join(input_data_root, 'TestData/pred_z.txt')
+        test_path['pred_x'] = os.path.join(input_data_root, 'TestData/pred_x.txt')
+        test_path['pred_y'] = os.path.join(input_data_root, 'TestData/pred_y.txt')
+        test_path['Label'] = os.path.join(input_data_root, 'TestData/Label.txt')     
 
         dataSplit = GetListFromFiles()
         folderName, trainNum, testNum = dataSplit.readImage(train_path, test_path)           
@@ -78,5 +89,20 @@ def main():
                                                                         unlabel=False)                        
         data_file_opened.close()
 
+def main():
+    #set seed
+    set_seed(config['seed'])
+    parser = argparse.ArgumentParser(description = "BATNet command line tool")
+    parser.add_argument("--project-folder", type=str, help = "project folder to save the output data.")
+    args = parser.parse_args()
+
+    input_data_root = args.project_folder
+    if not os.path.exists(os.path.join(input_data_root, "resultData")):
+        os.mkdir(os.path.join(input_data_root, "resultData"))
+    data_preprocessing(input_data_root, overwrite=config["overwrite"])
+
+
+
 if __name__ == "__main__":
+        
     main()

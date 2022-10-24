@@ -15,8 +15,10 @@ from keras_contrib.layers.normalization.groupnormalization import GroupNormaliza
 from keras import backend as K
 K.set_image_data_format("channels_first")
 
+
+
 def combineNet_3d(input_shape, n_labels=1, depth=5, n_base_filters=32,normMethod = 'batch_norm', activation_name = LeakyReLU,
-                  initial_learning_rate=0.00001, include_label_wise_dice_coefficients=False, metrics=dice_coefficient):
+                  initial_learning_rate=0.00001, include_label_wise_dice_coefficients=False, metrics=dice_coefficient, Loss = dice_coefficient_loss):
     """
     Builds the 3D UNet Keras model.f
     
@@ -69,7 +71,7 @@ def combineNet_3d(input_shape, n_labels=1, depth=5, n_base_filters=32,normMethod
         else:
             metrics = label_wise_dice_metrics
 
-    model.compile(optimizer=Adam(lr=initial_learning_rate), loss=dice_coefficient_loss, metrics=metrics)
+    model.compile(optimizer=Adam(lr=initial_learning_rate), loss=Loss, metrics=metrics)
     return model
 
 
@@ -97,60 +99,3 @@ def create_convolution_block(input_layer, n_filters, kernel=(3, 3, 3), activatio
     else:
         return activation()(layer)
     
-def create_discriminator(segmentation_shape, depth=3, n_base_filters=64, normMethod = 'batch_norm', learningRate = 0.01):
-    """
-    Build 3d GAN discriminator
-    """
-    inputs = Input(segmentation_shape) #Segmentation input
-    #inputs_2 = Input(image_shape) #images
-    #mult = Multiply()([inputs_1, inputs_2]) 
-    
-    current_layer = inputs
-    # 3d_CNN
-    for layer_depth in range(depth):
-        layer = create_convolution_block(input_layer = current_layer, n_filters = n_base_filters*(2**layer_depth), normMethod = 'batch_norm')
-        current_layer = create_convolution_block(input_layer = layer, n_filters = n_base_filters*(2**layer_depth), normMethod = 'batch_norm')
-        layer = create_convolution_block(input_layer = current_layer, n_filters = n_base_filters*(2**layer_depth), normMethod = 'batch_norm')
-        current_layer = MaxPooling3D(pool_size=(2, 2, 2))(layer)
-    # FCN
-    current_layer = Flatten()(current_layer)
-    for i in range(3):
-        layer = Dense(2**(9-2*i), activation='relu')(current_layer)
-        current_layer = Dropout(0.5)(layer)
-    final_layer = Dense(1, activation='linear')(current_layer)
-
-    frozen_discriminator = Model(inputs = inputs, outputs = final_layer)
-    frozen_discriminator.trainable = False
-    frozen_discriminator.compile(optimizer=RMSprop(lr=learningRate), loss='mse')
-    
-    discriminator = Model(inputs = inputs, outputs = final_layer)
-    discriminator.trainable = True
-    discriminator.compile(optimizer=RMSprop(lr=learningRate), loss='mse')
-        
-    return frozen_discriminator, discriminator
-
-def get_GAN(generator, discriminator, input_shape, learningRate = 0.01):
-        
-    inputs = Input(input_shape)
-    G_out = generator(inputs)
-    generator.name = 'gnet'
-    D_out = discriminator(G_out)
-    discriminator.name = 'dnet'  
-    GAN = Model(inputs=inputs, outputs=[G_out, D_out])
-    GAN.compile(optimizer=Adam(lr=learningRate), loss={'gnet':dice_coefficient_loss, 'dnet': 'mse'},\
-                  loss_weights={'gnet': 0.9, 'dnet': 0.1})
-    
-    return GAN
-
-
-def get_GAN_unlabel(generator, discriminator, input_shape, learningRate = 0.001):
-        
-    inputs = Input(input_shape)
-    G_out = generator(inputs)
-    generator.name = 'gnet'
-    D_out = discriminator(G_out)
-    discriminator.name = 'dnet'  
-    GAN_unlabel = Model(inputs=inputs, outputs=D_out)
-    GAN_unlabel.compile(optimizer=Adam(lr=learningRate), loss='mse')
-    
-    return GAN_unlabel

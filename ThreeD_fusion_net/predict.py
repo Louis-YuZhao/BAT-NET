@@ -1,12 +1,15 @@
 import os
-import argparse
+import subprocess
+
 from config import config
 from models.prediction import run_validation_case,trans_validation_case
 from models.utils import pickle_load
 
 #%%
-def validation(rootdir, model_path):
-    prediction_dir = rootdir
+rootdir =  os.path.abspath("../resultData/" )
+
+def validation(name, model_path):
+    prediction_dir = os.path.join(rootdir,name)
     if not os.path.exists(prediction_dir):
         os.makedirs(prediction_dir)
 
@@ -27,8 +30,8 @@ def validation(rootdir, model_path):
                               validation_keys_file =config["validation_file"], 
                               training_modalities=config["training_modalities"])
 
-def test(rootdir, model_path):
-    prediction_dir = rootdir
+def test(name, model_path):
+    prediction_dir = os.path.join(rootdir,name)
     if not os.path.exists(prediction_dir):
         os.makedirs(prediction_dir)
 
@@ -49,7 +52,7 @@ def test(rootdir, model_path):
                               validation_keys_file =config["test_file"], 
                               training_modalities=config["training_modalities"])
 
-def train_validation(rootdir, model_path):
+def train_validation(model_path):
     prediction_dir = os.path.join(rootdir,'train_prediction')
     if not os.path.exists(prediction_dir):
         os.makedirs(prediction_dir)
@@ -70,13 +73,6 @@ def train_validation(rootdir, model_path):
                               hdf5_file=config["unnorm_data_file"], 
                               validation_keys_file =config["training_file"], 
                               training_modalities=config["training_modalities"])
-
-def main():
-    parser = argparse.ArgumentParser(description = "BATNet command line tool")
-    parser.add_argument("--output_folder", type=str, help = "folder to restore the outputs")
-    args = parser.parse_args()
-    test(rootdir=args.output_folder,
-         model_path=config["model_file"]
-    )
 if __name__ == "__main__":
-    main()
+
+    test(name='test_prediction', model_path=config["model_file"])

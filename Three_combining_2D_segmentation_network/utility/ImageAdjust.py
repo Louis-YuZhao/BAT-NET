@@ -7,7 +7,7 @@ import os
 import numpy as np
 import SimpleITK as sitk 
 import subprocess
-from scipy.ndimage.interpolation import zoom
+from scipy.misc import imresize
 
 class imageAdjust(object):
     def __init__(self,inputFolderName, outputFolderName, config):
@@ -15,7 +15,7 @@ class imageAdjust(object):
         self.outputFolderName = outputFolderName
         self.config = config
 
-    def ReadFoldandSort(self, fileEnd):
+    def ReadFoldandSort(self, fileEnd=".nrrd"):
         imageList = []
         for fileItem in os.listdir(self.inputFolderName):
             if fileItem.endswith(fileEnd):
@@ -24,29 +24,7 @@ class imageAdjust(object):
         self.FileList = imageList
         return self.FileList
 
-    def ReSetImageParameter(self, config, newFileEnd):
-
-        Reference = config['Image_Reference']
-        origin = Reference['image_origin']
-        spacing = Reference['image_spacing']
-        direction = Reference['image_direction']
-
-        fileList = []
-        for imagedir in self.FileList:
-            image = sitk.ReadImage(imagedir)          
-            
-            image.SetOrigin(origin)
-            image.SetSpacing(spacing)
-            image.SetDirection(direction)            
-
-            dirname = imagedir.split('.')[0]
-            fn = dirname + newFileEnd
-            fileList.append(fn)
-            sitk.WriteImage(image,fn)
-        self.FileList = fileList
-        return self.FileList
-
-    def imagePadding(self, newsize):
+    def imagePadding(self, newsize, config):
 
         fileList = []
         z_pad = newsize['dim_z']
@@ -90,7 +68,7 @@ class imageAdjust(object):
         self.paddedFileList = fileList
         return self.paddedFileList
 
-    def imageResizing(self, newsize, interOrder):
+    def imageResizing(self, newsize, config):
 
         fileList = []
         z_resize = newsize['dim_z']
@@ -102,8 +80,7 @@ class imageAdjust(object):
             imageArray = sitk.GetArrayFromImage(image)
             z_org, x_org, y_org = np.shape(imageArray)
 
-            zoomFactor = (z_resize/float(z_org),x_resize/float(x_org),y_resize/float(y_org))
-            imageArrayResize = zoom(imageArray, zoom=zoomFactor,order=interOrder)
+            imageArrayResize = imresize(imageArray, size=(z_resize,x_resize,y_resize),interp=config['interpMethod'])
 
             img = sitk.GetImageFromArray(imageArrayResize)
             img.SetOrigin(image.GetOrigin())

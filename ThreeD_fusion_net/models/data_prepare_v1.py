@@ -7,12 +7,14 @@ import copy
 import itertools
 from random import shuffle
 
+
 import numpy as np
 
 from models.utils import pickle_dump, pickle_load
 from models.data import create_patch_data_file, write_patch_data_to_file
 from models.utils.patches import compute_patch_indices, get_random_nd_index, get_patch_from_3d_data
 from models.augment import augment_data, random_permutation_x_y
+from models.augment_v2 import augmentation_steps
 
 def get_training_and_validation_data(data_file, outputfolder, n_labels, labels, training_list, validation_list, 
                                     patch_shape = None, training_patch_overlap = 0, validation_patch_overlap = 0, 
@@ -221,7 +223,8 @@ def get_training_and_validation_generators(train_patch_data_file,
     validation_generator = data_generator(val_patch_data_file,
                                           batch_size = validation_batch_size,
                                           n_labels=n_labels,
-                                          labels=labels)
+                                          labels=labels,
+                                          augment=False)
 
     # Set the number of training and testing samples per epoch correctly
     num_training_steps = get_number_of_steps(get_number_of_patches(train_patch_data_file),batch_size)
@@ -234,7 +237,7 @@ def get_training_and_validation_generators(train_patch_data_file,
 
 def data_generator(patch_data_file, batch_size, n_labels,labels, augment=False, augment_flip=True,
                    augment_distortion_factor=0.25, shuffle_index_list=True, skip_blank=True, permute=False):    
-    n_sample = patch_data_file.root.data.shape[0]  
+    n_sample = patch_data_file.root.data.shape[0] 
     while True:         
         index_list = list(range(n_sample))
         x_list = list()
@@ -244,7 +247,7 @@ def data_generator(patch_data_file, batch_size, n_labels,labels, augment=False, 
         while len(index_list) > 0:
             # The method pop() removes and returns last object or obj from the list.
             index = index_list.pop()
-            add_patch_data(x_list, y_list, patch_data_file, index, augment=False, augment_flip=False, augment_distortion_factor=0.25,
+            add_patch_data(x_list, y_list, patch_data_file, index, augment=augment, augment_flip=augment_flip, augment_distortion_factor=augment_distortion_factor,
             skip_blank=True, permute=False)
             if len(x_list) == batch_size or (len(index_list) == 0 and len(x_list) > 0):
                 yield convert_data(x_list, y_list, n_labels=n_labels, labels=labels)
@@ -329,9 +332,9 @@ def add_patch_data(x_list, y_list, patch_data_file, index, augment=False, augmen
     :return:
     """
     data, truth, affine = patch_data_file.root.data[index], patch_data_file.root.truth[index], patch_data_file.root.affine[index]
-    if augment:
-        data, truth = augment_data(data, truth, affine, flip=augment_flip, scale_deviation=augment_distortion_factor)
 
+    if augment:
+        data, truth = augmentation_steps(data, truth)
     if permute:
         if data.shape[-3] != data.shape[-2] or data.shape[-2] != data.shape[-1]:
             raise ValueError("To utilize permutations, data array must be in 3D cube shape with all dimensions having "
@@ -339,7 +342,8 @@ def add_patch_data(x_list, y_list, patch_data_file, index, augment=False, augmen
         data, truth = random_permutation_x_y(data, truth[np.newaxis])
     else:
         truth = truth[np.newaxis]
-
+    
     if not skip_blank or np.any(truth != 0):
         x_list.append(data)
         y_list.append(truth)
+        

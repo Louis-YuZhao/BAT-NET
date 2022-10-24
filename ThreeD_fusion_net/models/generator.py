@@ -6,7 +6,6 @@ import itertools
 
 import numpy as np
 
-from .utils import pickle_dump, pickle_load
 from .utils.patches import compute_patch_indices, get_random_nd_index, get_patch_from_3d_data
 from .augment import augment_data, random_permutation_x_y
 

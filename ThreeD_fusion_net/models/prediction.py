@@ -128,13 +128,6 @@ def run_validation_case(test_index, out_dir, model_file, hdf5_file, validation_k
     affine = data_file.root.affine[data_index]
     test_data = np.asarray([data_file.root.data[data_index]])    
     
-    # for i, modality in enumerate(training_modalities):
-    #     image = nib.Nifti1Image(test_data[0, i], affine)
-    #     image.to_filename(os.path.join(out_dir, "PID_{0}_{1}.nii.gz".format(data_index, modality)))
-
-    # test_truth = nib.Nifti1Image(data_file.root.truth[data_index][0], affine)
-    # test_truth.to_filename(os.path.join(out_dir, "PID_{0}_truth.nii.gz".format(data_index)))
-
     patch_shape = tuple([int(dim) for dim in model.input.shape[-3:]])
     if patch_shape == test_data.shape[-3:]:
         # the model was trained t

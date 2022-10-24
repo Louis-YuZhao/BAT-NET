@@ -15,7 +15,9 @@ def DatasplitFile(data_path, testNum, outputDir):
     Datasplit = UBD.MulitModilityDataSplit(outputDir)
     Datasplit.inputImage(data_path['FF'],data_path['T2S'],data_path['F'],data_path['W'])
     Datasplit.inputLabel(data_path['Label'])
+    Datasplit.inputMask(data_path['Mask'])
     Datasplit.matchCheck(Datasplit.listLabel)
+    Datasplit.matchCheck(Datasplit.listMask)
     train_path, test_path = Datasplit.splitData(testNum)
     
     return train_path, test_path
@@ -31,10 +33,15 @@ class dataPrepare(object):
 
         # normalization
         self.NormType = config['NormType']
-        self.IfglobalNorm = config['IfglobalNorm']        
+        self.IfglobalNorm = config['IfglobalNorm']
+        if self.NormType == 0:
+            self.IsThereMask = False 
+        else:
+            self.IsThereMask = True
 
     def create_train_data(self, train_path,tempStore):
         '''
+        NormType = 2，3，4 : NormWithinMask
         NormType = 1 : NormWholeBody
         NormType = 0 : no Norm     
         '''    
@@ -45,10 +52,41 @@ class dataPrepare(object):
         UnetTrain = UBD.UnetBatDataPreprocessing()
         UnetTrain.inputImage(train_path['FF'],train_path['T2S'],train_path['F'],train_path['W'])
         UnetTrain.inputLabel(train_path['Label'])
-        UnetTrain.inputMask(train_path['Mask'])
+        if self.IsThereMask == True:
+            UnetTrain.inputMask(train_path['Mask'])
         UnetTrain.matchCheck(UnetTrain.listFF, UnetTrain.listLabel)
         
-        if  self.NormType == 1:
+        if self.NormType == 4:
+            # trainging volume # within Mask
+            outputTitle = os.path.join(tempStore,'imgs_train_FF_WM.npy')
+            UnetTrain.ReadVolumeDataNormEachPersonWithinMaskV3(UnetTrain.listFF, UnetTrain.listMask, outputTitle, np.float32)
+            outputTitle = os.path.join(tempStore,'imgs_train_T2S_WM.npy')
+            UnetTrain.ReadVolumeDataNormEachPersonWithinMaskV3(UnetTrain.listT2S, UnetTrain.listMask, outputTitle, np.float32)
+            outputTitle = os.path.join(tempStore,'imgs_train_F_WM.npy')
+            UnetTrain.ReadVolumeDataNormEachPersonWithinMaskV3(UnetTrain.listF, UnetTrain.listMask, outputTitle, np.float32)
+            outputTitle = os.path.join(tempStore,'imgs_train_W_WM.npy')
+            UnetTrain.ReadVolumeDataNormEachPersonWithinMaskV3(UnetTrain.listW, UnetTrain.listMask, outputTitle, np.float32)            
+        elif self.NormType == 3:
+            # trainging volume # within Mask
+            outputTitle = os.path.join(tempStore,'imgs_train_FF_WM.npy')
+            UnetTrain.ReadVolumeDataNormEachPersonWithinMaskV2(UnetTrain.listFF, UnetTrain.listMask, outputTitle, np.float32)
+            outputTitle = os.path.join(tempStore,'imgs_train_T2S_WM.npy')
+            UnetTrain.ReadVolumeDataNormEachPersonWithinMaskV2(UnetTrain.listT2S, UnetTrain.listMask, outputTitle, np.float32)
+            outputTitle = os.path.join(tempStore,'imgs_train_F_WM.npy')
+            UnetTrain.ReadVolumeDataNormEachPersonWithinMaskV2(UnetTrain.listF, UnetTrain.listMask, outputTitle, np.float32)
+            outputTitle = os.path.join(tempStore,'imgs_train_W_WM.npy')
+            UnetTrain.ReadVolumeDataNormEachPersonWithinMaskV2(UnetTrain.listW, UnetTrain.listMask, outputTitle, np.float32)
+        elif self.NormType == 2:
+            # trainging volume  # within Mask
+            outputTitle = os.path.join(tempStore,'imgs_train_FF_WM.npy')
+            UnetTrain.ReadVolumeDataNormEachPersonWithinMask(UnetTrain.listFF, UnetTrain.listMask, outputTitle, np.float32)
+            outputTitle = os.path.join(tempStore,'imgs_train_T2S_WM.npy')
+            UnetTrain.ReadVolumeDataNormEachPersonWithinMask(UnetTrain.listT2S, UnetTrain.listMask, outputTitle, np.float32)
+            outputTitle = os.path.join(tempStore,'imgs_train_F_WM.npy')
+            UnetTrain.ReadVolumeDataNormEachPersonWithinMask(UnetTrain.listF, UnetTrain.listMask, outputTitle, np.float32)
+            outputTitle = os.path.join(tempStore,'imgs_train_W_WM.npy')
+            UnetTrain.ReadVolumeDataNormEachPersonWithinMask(UnetTrain.listW, UnetTrain.listMask, outputTitle, np.float32)
+        elif self.NormType == 1:
             # trainging volume # whole Body
             outputTitle = os.path.join(tempStore,'imgs_train_FF_WB.npy')
             UnetTrain.ReadVolumeDataNormEachPerson(UnetTrain.listFF, outputTitle, np.float32)
@@ -83,10 +121,41 @@ class dataPrepare(object):
 
         UnetTest = UBD.UnetBatDataPreprocessing()
         UnetTest.inputImage(test_path['FF'],test_path['T2S'],test_path['F'],test_path['W'])
-        UnetTest.inputMask(test_path['Mask'])    
+        if self.IsThereMask == True:
+            UnetTest.inputMask(test_path['Mask'])    
         outputTitle = os.path.join(tempStore,'imgs_id_test.npy')
         UnetTest.RecordImageID(UnetTest.listFF, outputTitle)
-        if self.NormType == 1:
+        if self.NormType == 4:
+            # test volume # within Mask
+            outputTitle = os.path.join(tempStore,'imgs_test_FF_WM.npy')
+            UnetTest.ReadVolumeDataNormEachPersonWithinMaskV3(UnetTest.listFF, UnetTest.listMask, outputTitle, np.float32)
+            outputTitle = os.path.join(tempStore,'imgs_test_T2S_WM.npy')
+            UnetTest.ReadVolumeDataNormEachPersonWithinMaskV3(UnetTest.listT2S, UnetTest.listMask, outputTitle, np.float32)
+            outputTitle = os.path.join(tempStore,'imgs_test_F_WM.npy')
+            UnetTest.ReadVolumeDataNormEachPersonWithinMaskV3(UnetTest.listF, UnetTest.listMask, outputTitle, np.float32)
+            outputTitle = os.path.join(tempStore,'imgs_test_W_WM.npy')
+            UnetTest.ReadVolumeDataNormEachPersonWithinMaskV3(UnetTest.listW, UnetTest.listMask, outputTitle, np.float32)
+        elif self.NormType == 3:
+            # test volume # within Mask
+            outputTitle = os.path.join(tempStore,'imgs_test_FF_WM.npy')
+            UnetTest.ReadVolumeDataNormEachPersonWithinMaskV2(UnetTest.listFF, UnetTest.listMask, outputTitle, np.float32)
+            outputTitle = os.path.join(tempStore,'imgs_test_T2S_WM.npy')
+            UnetTest.ReadVolumeDataNormEachPersonWithinMaskV2(UnetTest.listT2S, UnetTest.listMask, outputTitle, np.float32)
+            outputTitle = os.path.join(tempStore,'imgs_test_F_WM.npy')
+            UnetTest.ReadVolumeDataNormEachPersonWithinMaskV2(UnetTest.listF, UnetTest.listMask, outputTitle, np.float32)
+            outputTitle = os.path.join(tempStore,'imgs_test_W_WM.npy')
+            UnetTest.ReadVolumeDataNormEachPersonWithinMaskV2(UnetTest.listW, UnetTest.listMask, outputTitle, np.float32)
+        elif self.NormType == 2:
+            # test volume # within MaskwholeBodyMask
+            outputTitle = os.path.join(tempStore,'imgs_test_FF_WM.npy')
+            UnetTest.ReadVolumeDataNormEachPersonWithinMask(UnetTest.listFF, UnetTest.listMask, outputTitle, np.float32)
+            outputTitle = os.path.join(tempStore,'imgs_test_T2S_WM.npy')
+            UnetTest.ReadVolumeDataNormEachPersonWithinMask(UnetTest.listT2S, UnetTest.listMask, outputTitle, np.float32)
+            outputTitle = os.path.join(tempStore,'imgs_test_F_WM.npy')
+            UnetTest.ReadVolumeDataNormEachPersonWithinMask(UnetTest.listF, UnetTest.listMask, outputTitle, np.float32)
+            outputTitle = os.path.join(tempStore,'imgs_test_W_WM.npy')
+            UnetTest.ReadVolumeDataNormEachPersonWithinMask(UnetTest.listW, UnetTest.listMask, outputTitle, np.float32)
+        elif self.NormType == 1:
             # test volume # whole Body
             outputTitle = os.path.join(tempStore,'imgs_test_FF_WB.npy')
             UnetTest.ReadVolumeDataNormEachPerson(UnetTest.listFF, outputTitle, np.float32)
@@ -111,7 +180,13 @@ class dataPrepare(object):
 
     def load_train_data(self, tempStore):
         imgs_train = {}
-        if self.NormType == 1:
+        if self.NormType == 4 or self.NormType == 3 or self.NormType == 2:
+            # test volume  # within Mask
+            imgs_train['FF'] = np.load(os.path.join(tempStore,'imgs_train_FF_WM.npy'))
+            imgs_train['T2S'] = np.load(os.path.join(tempStore,'imgs_train_T2S_WM.npy'))
+            imgs_train['F'] = np.load(os.path.join(tempStore,'imgs_train_F_WM.npy'))
+            imgs_train['W'] = np.load(os.path.join(tempStore,'imgs_train_W_WM.npy'))
+        elif self.NormType == 1:
             # test volume  # whole Body
             imgs_train['FF'] = np.load(os.path.join(tempStore,'imgs_train_FF_WB.npy'))
             imgs_train['T2S'] = np.load(os.path.join(tempStore,'imgs_train_T2S_WB.npy'))
@@ -129,7 +204,13 @@ class dataPrepare(object):
         return imgs_train, imgs_label_train
 
     def del_train_data(self, tempStore):
-        if self.NormType == 1:
+        if self.NormType == 4 or self.NormType == 3 or self.NormType == 2:
+            # test volume  # within Mask
+            os.remove(os.path.join(tempStore,'imgs_train_FF_WM.npy'))
+            os.remove(os.path.join(tempStore,'imgs_train_T2S_WM.npy'))
+            os.remove(os.path.join(tempStore,'imgs_train_F_WM.npy'))
+            os.remove(os.path.join(tempStore,'imgs_train_W_WM.npy'))
+        elif self.NormType == 1:
             # test volume  # whole Body
             os.remove(os.path.join(tempStore,'imgs_train_FF_WB.npy'))
             os.remove(os.path.join(tempStore,'imgs_train_T2S_WB.npy'))
@@ -147,7 +228,13 @@ class dataPrepare(object):
     
     def load_test_data(self, tempStore):    
         imgs_test = {}
-        if  self.NormType == 1:
+        if self.NormType == 4 or self.NormType == 3 or self.NormType == 2:
+            # test volume  # within Mask
+            imgs_test['FF'] = np.load(os.path.join(tempStore,'imgs_test_FF_WM.npy'))
+            imgs_test['T2S'] = np.load(os.path.join(tempStore,'imgs_test_T2S_WM.npy'))
+            imgs_test['F'] = np.load(os.path.join(tempStore,'imgs_test_F_WM.npy'))
+            imgs_test['W'] = np.load(os.path.join(tempStore,'imgs_test_W_WM.npy'))
+        elif self.NormType == 1:
             # test volume  # whole Body
             imgs_test['FF'] = np.load(os.path.join(tempStore,'imgs_test_FF_WB.npy'))
             imgs_test['T2S'] = np.load(os.path.join(tempStore,'imgs_test_T2S_WB.npy'))
@@ -164,7 +251,13 @@ class dataPrepare(object):
         return imgs_test, imgs_id
 
     def del_test_data(self, tempStore):    
-        if self.NormType == 1:
+        if self.NormType == 4 or self.NormType == 3 or self.NormType == 2:
+            # test volume  # within Mask
+            os.remove(os.path.join(tempStore,'imgs_test_FF_WM.npy'))
+            os.remove(os.path.join(tempStore,'imgs_test_T2S_WM.npy'))
+            os.remove(os.path.join(tempStore,'imgs_test_F_WM.npy'))
+            os.remove(os.path.join(tempStore,'imgs_test_W_WM.npy'))
+        elif self.NormType == 1:
             # test volume  # whole Body
             os.remove(os.path.join(tempStore,'imgs_test_FF_WB.npy'))
             os.remove(os.path.join(tempStore,'imgs_test_T2S_WB.npy'))
@@ -183,9 +276,7 @@ class dataPrepare(object):
         Num = imgs['FF'].shape[0]
         imgs_p = np.ndarray(((Num * self.img_z), self.img_x, self.img_y, ChannelNum), dtype=np.float32)
         channel = 0
-        keys = imgs.keys()
-        keys.sort()
-        for key in keys:
+        for key in imgs:
             for i in range(Num):
                 for j in range(self.img_z):
                     imgs_p[((i*self.img_z)+j),:,:,channel] = imgs[key][i,j,:,:]
@@ -198,9 +289,7 @@ class dataPrepare(object):
         Num = imgs['FF'].shape[0]
         imgs_p = np.ndarray(((Num * self.img_x), self.img_z, self.img_y, ChannelNum), dtype=np.float32)
         channel = 0
-        keys = imgs.keys()
-        keys.sort()
-        for key in keys:
+        for key in imgs:
             for i in range(Num):
                 for j in range(self.img_x):
                     imgs_p[((i*self.img_x)+j),:,:,channel] = imgs[key][i,:,j,:]
@@ -213,9 +302,7 @@ class dataPrepare(object):
         Num = imgs['FF'].shape[0]
         imgs_p = np.ndarray(((Num * self.img_y), self.img_z, self.img_x, ChannelNum), dtype=np.float32)
         channel = 0
-        keys = imgs.keys()
-        keys.sort()
-        for key in keys:
+        for key in imgs:
             for i in range(Num):
                 for j in range(self.img_y):
                     imgs_p[((i*self.img_y)+j),:,:,channel] = imgs[key][i,:,:,j]
@@ -280,7 +367,8 @@ class dataPrepare(object):
         
         return imgs_train, imgs_label_train
         
-    def testPrepare(self, tempStore, mean=None, std=None):
+    def testPrepare(self, tempStore):
+        #def testPrepare(self, tempStore, mean=None, std=None):
         imgs_test_dir, _ = self.load_test_data(tempStore)
         if self.dataDim == 'z':
             imgs_test = self.preprocessDimZ(imgs_test_dir)
@@ -294,37 +382,14 @@ class dataPrepare(object):
         
         if self.IfglobalNorm == True:
             channelNum = imgs_test.shape[3]
-            for i in range(channelNum):            
-                imgs_test[:,:,:,i] -= mean[i]
-                imgs_test[:,:,:,i] /= std[i]
-        return imgs_test
-    
-    def testPrepareSelfNorm(self, tempStore):
-        
-        imgs_test_dir, _ = self.load_test_data(tempStore)
-        if self.dataDim == 'z':
-            imgs_test = self.preprocessDimZ(imgs_test_dir)
-        elif self.dataDim == 'x':
-            imgs_test = self.preprocessDimX(imgs_test_dir)
-        elif self.dataDim == 'y':
-            imgs_test = self.preprocessDimY(imgs_test_dir)
-        else:
-            raise ValueError('dataDim should be x, y, z')
-
-        imgs_test = imgs_test.astype('float32') 
-       
-        if self.IfglobalNorm == True:
-            channelNum = imgs_test.shape[3]
             mean = np.zeros(channelNum,)
             std = np.zeros(channelNum,)
             for i in range(channelNum):
                 mean[i] = np.mean(imgs_test[:,:,:,i])  # mean for data centering
                 std[i] = np.std(imgs_test[:,:,:,i])  # std for data normalization
                 imgs_test[:,:,:,i] -= mean[i]
-                imgs_test[:,:,:,i] /= std[i]       
-        
+                imgs_test[:,:,:,i] /= std[i]
         return imgs_test
-    
     def MultiChannelDataPrepare(self, train_path, test_path, tempStore):
 
         # train part
@@ -352,15 +417,7 @@ class dataPrepare(object):
         print('-'*30)
         
         if self.IfglobalNorm == True:
-            imgs_test = self.testPrepare(tempStore, mean, std)
+            imgs_test = self.testPrepare(tempStore)
         elif self.IfglobalNorm == False:
             imgs_test = self.testPrepare(tempStore)    
-        np.save(os.path.join(tempStore,'imgs_volume_test.npy'),imgs_test) 
-    
-    def Predict_dataPrepare(self, tempStore):
-        print('-'*30)
-        print('Loading and preprocessing test data...')
-        print('-'*30)        
-
-        imgs_test = self.testPrepareSelfNorm(tempStore)    
         np.save(os.path.join(tempStore,'imgs_volume_test.npy'),imgs_test) 

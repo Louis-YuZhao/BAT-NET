@@ -50,9 +50,6 @@ class postRefinement(object):
         # label
         self.filepathLab = filepathLabel
         self.imageLab = sitk.ReadImage(self.filepathLab)
-        self.origin = self.imageLab.GetOrigin()
-        self.direction = self.imageLab.GetDirection()
-        self.spacing = self.imageLab.GetSpacing()
         self.arrayLab = sitk.GetArrayFromImage(self.imageLab).astype(np.uint8)
         self.shapeLab = np.shape(self.arrayLab)
         
@@ -112,9 +109,9 @@ class postRefinement(object):
             showImageArray(self.arrayLab, 'label after refinement')
              
         self.imageLab = sitk.GetImageFromArray(self.arrayLab)
-        self.imageLab.SetOrigin(self.origin)                               
-        self.imageLab.SetSpacing(self.spacing)                                
-        self.imageLab.SetDirection(self.direction)
+        self.imageLab.SetOrigin(self.imageLab.GetOrigin())                               
+        self.imageLab.SetSpacing(self.imageLab.GetSpacing())                                
+        self.imageLab.SetDirection(self.imageLab.GetDirection())
         
         if ifLogOutput != False:
             dirname = self.outputdir + '/'             
@@ -140,9 +137,9 @@ class postRefinement(object):
             showImageArray(self.arrayLab, 'label after removeBoneadnAir')
  
         self.imageLab = sitk.GetImageFromArray(self.arrayLab)
-        self.imageLab.SetOrigin(self.origin)                               
-        self.imageLab.SetSpacing(self.spacing)                                
-        self.imageLab.SetDirection(self.direction)
+        self.imageLab.SetOrigin(self.imageLab.GetOrigin())                               
+        self.imageLab.SetSpacing(self.imageLab.GetSpacing())                                
+        self.imageLab.SetDirection(self.imageLab.GetDirection())
 
         if ifLogOutput != False:
             dirname = self.outputdir + '/'             
@@ -199,9 +196,9 @@ class postRefinement(object):
             showImageArray(self.arrayLab, 'label after remove_small_objects')
 
         self.imageLab = sitk.GetImageFromArray(self.arrayLab)
-        self.imageLab.SetOrigin(self.origin)                               
-        self.imageLab.SetSpacing(self.spacing)                                
-        self.imageLab.SetDirection(self.direction)
+        self.imageLab.SetOrigin(self.imageLab.GetOrigin())                               
+        self.imageLab.SetSpacing(self.imageLab.GetSpacing())                                
+        self.imageLab.SetDirection(self.imageLab.GetDirection())
 
         if ifLogOutput != False:
             dirname = self.outputdir + '/'             
